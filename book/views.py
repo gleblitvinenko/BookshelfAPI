@@ -13,3 +13,4 @@ class BookViewSet(viewsets.ModelViewSet):
         if self.action == "list":
             return (AllowAny(), )
         return (IsAdminUser(), )
+
