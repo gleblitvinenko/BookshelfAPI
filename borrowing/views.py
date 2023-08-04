@@ -7,9 +7,12 @@ from borrowing.serializers import BorrowingSerializer, BorrowingDetailSerializer
 
 class BorrowingListView(generics.ListAPIView):
 
-    queryset = Borrowing.objects.select_related("borrower", "book")
     serializer_class = BorrowingSerializer
     permission_classes = (IsAuthenticated, )
+
+    def get_queryset(self):
+        user = self.request.user
+        return Borrowing.objects.filter(borrower=user).select_related("borrower", "book")
 
     def get_object(self):
         return self.request.user
@@ -17,9 +20,10 @@ class BorrowingListView(generics.ListAPIView):
 
 class BorrowingDetailView(generics.RetrieveAPIView):
 
-    queryset = Borrowing.objects.select_related("borrower", "book")
     serializer_class = BorrowingDetailSerializer
     permission_classes = (IsAuthenticated, )
+    lookup_field = "id"
 
-    def get_object(self):
-        return self.request.user
+    def get_queryset(self):
+        user = self.request.user
+        return Borrowing.objects.filter(borrower=user).select_related("borrower", "book")
