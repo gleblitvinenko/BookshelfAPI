@@ -1,3 +1,5 @@
+from datetime import date
+
 from rest_framework import serializers
 
 from book.models import Book
@@ -38,3 +40,17 @@ class CreateBorrowingSerializer(serializers.ModelSerializer):
         validated_data["borrower"] = borrower
 
         return super().create(validated_data)
+
+
+class ReturnBorrowSerializer(serializers.ModelSerializer):
+    actual_return_date = serializers.DateField(default=date.today, read_only=True)
+
+    class Meta:
+        model = Borrowing
+        fields = ["actual_return_date"]
+
+    def update(self, instance, validated_data):
+        # Set the actual_return_date to the current date
+        instance.actual_return_date = date.today()
+        instance.save()
+        return instance

@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.db import transaction
 from rest_framework import generics
 from rest_framework.exceptions import ValidationError
@@ -5,7 +7,8 @@ from rest_framework.permissions import IsAuthenticated
 
 from book.models import Book
 from borrowing.models import Borrowing
-from borrowing.serializers import BorrowingSerializer, BorrowingDetailSerializer, CreateBorrowingSerializer
+from borrowing.serializers import BorrowingSerializer, BorrowingDetailSerializer, CreateBorrowingSerializer, \
+    ReturnBorrowSerializer
 
 
 class BorrowingListView(generics.ListCreateAPIView):
@@ -53,3 +56,25 @@ class BorrowingDetailView(generics.RetrieveAPIView):
     def get_queryset(self):
         user = self.request.user
         return Borrowing.objects.filter(borrower=user).select_related("borrower", "book")
+
+
+class BorrowingReturnView(generics.UpdateAPIView):
+    queryset = Borrowing.objects.all()
+    serializer_class = ReturnBorrowSerializer
+    permission_classes = (IsAuthenticated, )
+    lookup_field = "id"
+
+    def perform_update(self, serializer):
+        borrowing = serializer.instance
+
+        # Ensure that the borrowing is associated with the current authenticated user
+        if borrowing.borrower != self.request.user:
+            raise ValidationError("You are not allowed to return this borrowing.")
+
+        # Check if the borrowing has already been returned
+        if borrowing.actual_return_date is not None:
+            raise ValidationError("This borrowing has already been returned.")
+
+        # Set the actual_return_date to the current date
+        borrowing.actual_return_date = date.today()
+        borrowing.save()
