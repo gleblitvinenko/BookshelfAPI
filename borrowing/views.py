@@ -27,7 +27,6 @@ class BorrowingListView(generics.ListCreateAPIView):
 
     @transaction.atomic
     def perform_create(self, serializer):
-        request_data = serializer.validated_data
         book_id = serializer.validated_data.get("book")
         print(book_id)
 
@@ -67,14 +66,13 @@ class BorrowingReturnView(generics.UpdateAPIView):
     def perform_update(self, serializer):
         borrowing = serializer.instance
 
-        # Ensure that the borrowing is associated with the current authenticated user
         if borrowing.borrower != self.request.user:
             raise ValidationError("You are not allowed to return this borrowing.")
 
-        # Check if the borrowing has already been returned
         if borrowing.actual_return_date is not None:
             raise ValidationError("This borrowing has already been returned.")
 
-        # Set the actual_return_date to the current date
+        borrowing.book.inventory += 1
+        borrowing.book.save()
         borrowing.actual_return_date = date.today()
         borrowing.save()
