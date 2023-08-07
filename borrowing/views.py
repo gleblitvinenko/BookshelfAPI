@@ -32,9 +32,7 @@ class BorrowingListView(generics.ListCreateAPIView):
             queryset_ = queryset_.filter(borrower=user_id)
 
         if user.is_staff is False:
-            return queryset_.filter(borrower=user).select_related(
-                "borrower", "book"
-            )
+            return queryset_.filter(borrower=user).select_related("borrower", "book")
 
         if is_active is not None:
             queryset_ = queryset_.filter(actual_return_date__isnull=True)
@@ -49,11 +47,8 @@ class BorrowingListView(generics.ListCreateAPIView):
     @transaction.atomic
     def perform_create(self, serializer):
         book_id = serializer.validated_data.get("book")
-        print(book_id)
-
         try:
             book = Book.objects.get(pk=book_id.id)
-            print(book)
         except Book.DoesNotExist:
             raise ValidationError("The selected book does not exist.")
 
@@ -65,7 +60,14 @@ class BorrowingListView(generics.ListCreateAPIView):
             raise ValidationError("No such books left")
 
         serializer.save(borrower=self.request.user)
-        asyncio.run(send_notifications_in_group())
+        asyncio.run(
+            send_notifications_in_group(
+                f"✉️ New borrowing\n"
+                f"🤠 From {self.request.user.email}\n"
+                f"📕 Book: {book_id.title}\n"
+                f"⬅️ Expected return date: {serializer.validated_data.get('expected_return_date')}"
+            )
+        )
 
 
 class BorrowingDetailView(generics.RetrieveAPIView):
