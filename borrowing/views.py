@@ -1,3 +1,4 @@
+import asyncio
 from datetime import date
 
 from django.db import transaction
@@ -6,6 +7,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 
 from book.models import Book
+from borrowing.bot import send_notifications_in_group
 from borrowing.models import Borrowing
 from borrowing.serializers import (
     BorrowingSerializer,
@@ -63,6 +65,7 @@ class BorrowingListView(generics.ListCreateAPIView):
             raise ValidationError("No such books left")
 
         serializer.save(borrower=self.request.user)
+        asyncio.run(send_notifications_in_group())
 
 
 class BorrowingDetailView(generics.RetrieveAPIView):
