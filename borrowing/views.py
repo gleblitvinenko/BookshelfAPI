@@ -104,3 +104,10 @@ class BorrowingReturnView(generics.UpdateAPIView):
         borrowing.book.save()
         borrowing.actual_return_date = date.today()
         borrowing.save()
+
+        asyncio.run(send_notifications_in_group(
+            f"📩 Returned borrowing\n"
+            f"🤠 From {self.request.user.email}\n"
+            f"📕 Book: {borrowing.book.title}\n"
+            f"⬅️ Return date {borrowing.actual_return_date}"
+        ))
