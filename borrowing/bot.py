@@ -1,9 +1,14 @@
+import os
+
 from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher
 from aiogram.utils import executor
+from dotenv import load_dotenv
 
-API_TOKEN = "6671991384:AAHgJGgXG24YBQ146W1PWIYxIgRfo8FUeAE"
-CHAT_ID = -931563366
+load_dotenv()
+
+API_TOKEN = os.getenv("API_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
