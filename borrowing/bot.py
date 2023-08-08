@@ -20,7 +20,6 @@ async def send_notifications_in_group(notification_message: str):
 
 @dp.message_handler(commands=["start"])
 async def send_welcome(message: types.Message):
-    print(message)
     await message.reply("Hi, it is start message!")
 
 
