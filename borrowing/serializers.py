@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from book.models import Book
 from book.serializers import BookSerializer
-from borrowing.models import Borrowing
+from borrowing.models import Borrowing, Payment
 
 
 class BorrowingSerializer(serializers.ModelSerializer):
@@ -54,3 +54,18 @@ class ReturnBorrowSerializer(serializers.ModelSerializer):
         instance.actual_return_date = date.today()
         instance.save()
         return instance
+
+
+class PaymentListSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Payment
+        fields = ("id", "status", "type", "money_to_pay")
+
+
+class PaymentDetailSerializer(serializers.ModelSerializer):
+    borrowing = BorrowingSerializer
+
+    class Meta:
+        model = Payment
+        fields = ("id", "status", "type", "borrowing", "session_url", "session_id", "money_to_pay")
