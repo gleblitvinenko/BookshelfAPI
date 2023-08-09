@@ -8,12 +8,12 @@ from rest_framework.permissions import IsAuthenticated
 
 from book.models import Book
 from borrowing.bot import send_notifications_in_group
-from borrowing.models import Borrowing
+from borrowing.models import Borrowing, Payment
 from borrowing.serializers import (
     BorrowingSerializer,
     BorrowingDetailSerializer,
     CreateBorrowingSerializer,
-    ReturnBorrowSerializer,
+    ReturnBorrowSerializer, PaymentListSerializer,
 )
 
 
@@ -111,3 +111,17 @@ class BorrowingReturnView(generics.UpdateAPIView):
             f"📕 Book: {borrowing.book.title}\n"
             f"⬅️ Return date {borrowing.actual_return_date}"
         ))
+
+
+class PaymentListView(generics.ListAPIView):
+    queryset = Payment.objects.select_related("borrowing")
+    serializer_class = PaymentListSerializer
+    permission_classes = (IsAuthenticated, )
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset_ = Payment.objects.select_related("borrowing")
+
+        if user.is_staff is False:
+            queryset_ = queryset_.filter(borrowing__borrower=user).select_related("borrowing")
+        return queryset_
