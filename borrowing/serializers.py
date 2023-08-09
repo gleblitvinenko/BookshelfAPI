@@ -64,7 +64,7 @@ class PaymentListSerializer(serializers.ModelSerializer):
 
 
 class PaymentDetailSerializer(serializers.ModelSerializer):
-    borrowing = BorrowingSerializer
+    borrowing = BorrowingSerializer(read_only=True)
 
     class Meta:
         model = Payment
