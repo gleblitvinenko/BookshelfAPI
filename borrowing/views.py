@@ -13,7 +13,9 @@ from borrowing.serializers import (
     BorrowingSerializer,
     BorrowingDetailSerializer,
     CreateBorrowingSerializer,
-    ReturnBorrowSerializer, PaymentListSerializer,
+    ReturnBorrowSerializer,
+    PaymentListSerializer,
+    PaymentDetailSerializer,
 )
 
 
@@ -105,23 +107,44 @@ class BorrowingReturnView(generics.UpdateAPIView):
         borrowing.actual_return_date = date.today()
         borrowing.save()
 
-        asyncio.run(send_notifications_in_group(
-            f"📩 Returned borrowing\n"
-            f"🤠 From {self.request.user.email}\n"
-            f"📕 Book: {borrowing.book.title}\n"
-            f"⬅️ Return date {borrowing.actual_return_date}"
-        ))
+        asyncio.run(
+            send_notifications_in_group(
+                f"📩 Returned borrowing\n"
+                f"🤠 From {self.request.user.email}\n"
+                f"📕 Book: {borrowing.book.title}\n"
+                f"⬅️ Return date {borrowing.actual_return_date}"
+            )
+        )
 
 
 class PaymentListView(generics.ListAPIView):
     queryset = Payment.objects.select_related("borrowing")
     serializer_class = PaymentListSerializer
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
         user = self.request.user
         queryset_ = Payment.objects.select_related("borrowing")
 
         if user.is_staff is False:
-            queryset_ = queryset_.filter(borrowing__borrower=user).select_related("borrowing")
+            queryset_ = queryset_.filter(borrowing__borrower=user).select_related(
+                "borrowing"
+            )
         return queryset_
+
+
+class PaymentDetailView(generics.RetrieveAPIView):
+    serializer_class = PaymentDetailSerializer
+    permission_classes = (IsAuthenticated,)
+    lookup_field = "id"
+
+    def get_queryset(self, *args, **kwargs):
+        user = self.request.user
+        payment_id = self.kwargs.get("id")
+
+        if user.is_staff is False:
+            return Payment.objects.filter(borrowing__borrower=user).select_related(
+                "borrowing"
+            )
+
+        return Payment.objects.filter(pk=payment_id)
