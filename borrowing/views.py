@@ -85,13 +85,3 @@ class BorrowingViewSet(
         book.save()
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-# asyncio.run(
-#      send_notifications_in_group(
-#          f"📩 Returned borrowing\n"
-#          f"🤠 From {self.request.user.email}\n"
-#          f"📕 Book: {borrowing.book.title}\n"
-#          f"⬅️ Return date {borrowing.actual_return_date}"
-#      )
-#  )
