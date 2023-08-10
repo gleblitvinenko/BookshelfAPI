@@ -8,13 +8,13 @@ from user.serializers import UserRegisterSerializer, UserSerializer
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = UserRegisterSerializer
-    permission_classes = (AllowUnauthenticatedOnly, )
+    permission_classes = (AllowUnauthenticatedOnly,)
 
 
 class MyProfileView(generics.RetrieveUpdateAPIView):
     queryset = get_user_model().objects.all()
     serializer_class = UserSerializer
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (IsAuthenticated,)
 
     def get_object(self):
         return self.request.user

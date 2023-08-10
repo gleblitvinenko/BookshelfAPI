@@ -73,23 +73,19 @@ class BorrowingViewSet(
         url_path="return",
         permission_classes=[permissions.IsAuthenticated],
     )
-    def return_book(
-        self, request: Request, pk: Optional[int] = None
-    ) -> Response:
+    def return_book(self, request: Request, pk: Optional[int] = None) -> Response:
         """Endpoint for return book specific borrowing"""
         borrowing = self.get_object()
         book = borrowing.book
         serializer = self.get_serializer(
-            borrowing,
-            data=request.data,
-            partial=True,
-            context={"pk": pk}
+            borrowing, data=request.data, partial=True, context={"pk": pk}
         )
         serializer.is_valid(raise_exception=True)
         book.inventory += 1
         book.save()
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 # asyncio.run(
 #      send_notifications_in_group(
