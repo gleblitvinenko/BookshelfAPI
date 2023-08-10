@@ -1,150 +1,101 @@
-import asyncio
-from datetime import date
+from typing import Type, Optional
 
-from django.db import transaction
-from rest_framework import generics
-from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import IsAuthenticated
+from django.db.models import QuerySet
+from rest_framework import viewsets, mixins, permissions, status
+from rest_framework.decorators import action
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.serializers import Serializer
 
-from book.models import Book
-from borrowing.bot import send_notifications_in_group
-from borrowing.models import Borrowing, Payment
+from borrowing.models import Borrowing
 from borrowing.serializers import (
     BorrowingSerializer,
     BorrowingDetailSerializer,
-    CreateBorrowingSerializer,
-    ReturnBorrowSerializer,
-    PaymentListSerializer,
-    PaymentDetailSerializer,
+    BorrowingCreateSerializer,
+    BorrowingReturnBookSerializer,
 )
 
 
-class BorrowingListView(generics.ListCreateAPIView):
-    queryset = Borrowing.objects.select_related("borrower", "book")
-    serializer_class = BorrowingSerializer
-    permission_classes = (IsAuthenticated,)
-
-    def get_queryset(self):
-        user = self.request.user
-        queryset_ = Borrowing.objects.select_related("borrower", "book")
-        user_id = self.request.query_params.get("user_id")
-        is_active = self.request.query_params.get("is_active")
-
-        if user_id is not None and user.is_staff:
-            queryset_ = queryset_.filter(borrower=user_id)
-
-        if user.is_staff is False:
-            return queryset_.filter(borrower=user).select_related("borrower", "book")
-
-        if is_active is not None:
-            queryset_ = queryset_.filter(actual_return_date__isnull=True)
-
-        return queryset_
-
-    def get_serializer_class(self):
-        if self.request.method == "POST":
-            return CreateBorrowingSerializer
-        return BorrowingSerializer
-
-    @transaction.atomic
-    def perform_create(self, serializer):
-        book_id = serializer.validated_data.get("book")
-        try:
-            book = Book.objects.get(pk=book_id.id)
-        except Book.DoesNotExist:
-            raise ValidationError("The selected book does not exist.")
-
-        book_inventory = book.inventory
-        if book_inventory > 0:
-            book.inventory -= 1
-            book.save()
-        else:
-            raise ValidationError("No such books left")
-
-        serializer.save(borrower=self.request.user)
-        asyncio.run(
-            send_notifications_in_group(
-                f"✉️ New borrowing\n"
-                f"🤠 From {self.request.user.email}\n"
-                f"📕 Book: {book_id.title}\n"
-                f"⬅️ Expected return date: {serializer.validated_data.get('expected_return_date')}"
-            )
-        )
-
-
-class BorrowingDetailView(generics.RetrieveAPIView):
-    serializer_class = BorrowingDetailSerializer
-    permission_classes = (IsAuthenticated,)
-    lookup_field = "id"
-
-    def get_queryset(self, *args, **kwargs):
-        user = self.request.user
-        borrowing_id = self.kwargs.get("id")
-        if user.is_staff is False:
-            return Borrowing.objects.filter(borrower=user).select_related(
-                "borrower", "book"
-            )
-        return Borrowing.objects.filter(pk=borrowing_id)
-
-
-class BorrowingReturnView(generics.UpdateAPIView):
+class BorrowingViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
     queryset = Borrowing.objects.all()
-    serializer_class = ReturnBorrowSerializer
-    permission_classes = (IsAuthenticated,)
-    lookup_field = "id"
+    serializer_class = BorrowingSerializer
+    permission_classes = (permissions.IsAuthenticated,)
 
-    def perform_update(self, serializer):
-        borrowing = serializer.instance
+    def get_queryset(self) -> QuerySet[Borrowing]:
+        """
+        Return borrowings only for current user.
+        Filtering if borrowing has not returned yet.
+        Admin can see all users borrowings, and filtering borrowing by user id.
+        """
+        is_active = self.request.query_params.get("is_active")
+        user_id = self.request.query_params.get("user_id")
 
-        if borrowing.borrower != self.request.user:
-            raise ValidationError("You are not allowed to return this borrowing.")
+        queryset = self.queryset
 
-        if borrowing.actual_return_date is not None:
-            raise ValidationError("This borrowing has already been returned.")
+        if not self.request.user.is_staff:
+            queryset = Borrowing.objects.filter(borrower=self.request.user)
 
-        borrowing.book.inventory += 1
-        borrowing.book.save()
-        borrowing.actual_return_date = date.today()
-        borrowing.save()
+        if self.request.user.is_staff:
+            if user_id:
+                queryset = queryset.filter(borrower_id=user_id)
 
-        asyncio.run(
-            send_notifications_in_group(
-                f"📩 Returned borrowing\n"
-                f"🤠 From {self.request.user.email}\n"
-                f"📕 Book: {borrowing.book.title}\n"
-                f"⬅️ Return date {borrowing.actual_return_date}"
-            )
+        if is_active:
+            if is_active.lower() == "true":
+                queryset = queryset.filter(actual_return_date=None)
+
+        return queryset
+
+    def get_serializer_class(self) -> Type[Serializer]:
+        """Return serializer depending on the action"""
+        if self.action == "retrieve":
+            return BorrowingDetailSerializer
+
+        if self.action == "create":
+            return BorrowingCreateSerializer
+
+        if self.action == "return_book":
+            return BorrowingReturnBookSerializer
+
+        return self.serializer_class
+
+    def perform_create(self, serializer: Serializer[Borrowing]) -> None:
+        """Create borrowing only for current user"""
+        serializer.save(borrower=self.request.user)
+
+    @action(
+        methods=["PATCH"],
+        detail=True,
+        url_path="return",
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def return_book(
+        self, request: Request, pk: Optional[int] = None
+    ) -> Response:
+        """Endpoint for return book specific borrowing"""
+        borrowing = self.get_object()
+        book = borrowing.book
+        serializer = self.get_serializer(
+            borrowing,
+            data=request.data,
+            partial=True,
+            context={"pk": pk}
         )
+        serializer.is_valid(raise_exception=True)
+        book.inventory += 1
+        book.save()
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-
-class PaymentListView(generics.ListAPIView):
-    queryset = Payment.objects.select_related("borrowing")
-    serializer_class = PaymentListSerializer
-    permission_classes = (IsAuthenticated,)
-
-    def get_queryset(self):
-        user = self.request.user
-        queryset_ = Payment.objects.select_related("borrowing")
-
-        if user.is_staff is False:
-            queryset_ = queryset_.filter(borrowing__borrower=user).select_related(
-                "borrowing"
-            )
-        return queryset_
-
-
-class PaymentDetailView(generics.RetrieveAPIView):
-    serializer_class = PaymentDetailSerializer
-    permission_classes = (IsAuthenticated,)
-    lookup_field = "id"
-
-    def get_queryset(self, *args, **kwargs):
-        user = self.request.user
-        payment_id = self.kwargs.get("id")
-
-        if user.is_staff is False:
-            return Payment.objects.filter(borrowing__borrower=user).select_related(
-                "borrowing"
-            )
-
-        return Payment.objects.filter(pk=payment_id)
+# asyncio.run(
+#      send_notifications_in_group(
+#          f"📩 Returned borrowing\n"
+#          f"🤠 From {self.request.user.email}\n"
+#          f"📕 Book: {borrowing.book.title}\n"
+#          f"⬅️ Return date {borrowing.actual_return_date}"
+#      )
+#  )

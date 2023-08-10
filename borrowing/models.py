@@ -1,8 +1,9 @@
-from _decimal import Decimal
+from datetime import date
+from typing import Optional, Type
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils import timezone
 
 from book.models import Book
 
@@ -21,42 +22,38 @@ class Borrowing(models.Model):
         on_delete=models.CASCADE,
     )
 
-    def validate_future_date(self, value):
-        if value < timezone.now().date():
-            raise ValidationError("Date must be in the future.")
+    @staticmethod
+    def validate_date(
+        expected_return_date: date,
+        actual_return_date: date,
+        error_to_raise: Type[ValidationError],
+    ):
+        if expected_return_date < date.today():
+            raise error_to_raise("Return date must be after borrow date!")
 
-    def clean(self):
-        self.validate_future_date(self.borrow_date)
-        self.validate_future_date(self.expected_return_date)
+        if actual_return_date and actual_return_date <= date.today():
+            raise error_to_raise(
+                "Actual return date cannot be less or equal borrow date"
+            )
+
+    def clean(self) -> None:
+        Borrowing.validate_date(
+            self.expected_return_date,
+            self.actual_return_date,
+            ValidationError,
+        )
+
+    def save(
+        self,
+        force_insert: bool = False,
+        force_update: bool = False,
+        using: Optional[str] = None,
+        update_fields: Optional[list[str]] = None,
+    ):
+        self.full_clean()
+        return super(Borrowing, self).save(
+            force_insert, force_update, using, update_fields
+        )
 
     def __str__(self):
         return f"{self.borrower} borrowed {self.book} on {self.borrow_date}"
-
-
-class Payment(models.Model):
-    class StatusChoices(models.TextChoices):
-        PENDING = "Pending"
-        PAID = "Paid"
-
-    class TypeChoices(models.TextChoices):
-        PAYMENT = "Payment"
-        FINE = "Fine"
-
-    status = models.CharField(max_length=50, choices=StatusChoices.choices)
-    type = models.CharField(max_length=50, choices=TypeChoices.choices)
-    borrowing = models.ForeignKey(
-        Borrowing, related_name="borrowing", on_delete=models.CASCADE
-    )
-    session_url = models.URLField()
-    session_id = models.CharField(max_length=255)
-    money_to_pay = models.DecimalField(max_digits=7, decimal_places=2)
-
-    def save(self, *args, **kwargs):
-        if self.borrowing.actual_return_date and self.borrowing:
-            days_borrowed = (
-                self.borrowing.actual_return_date - self.borrowing.borrow_date
-            ).days
-            money_to_pay = Decimal(days_borrowed) * self.borrowing.book.daily_fee
-            self.money_to_pay = money_to_pay
-
-        super().save(*args, **kwargs)

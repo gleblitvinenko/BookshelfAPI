@@ -44,9 +44,11 @@ INSTALLED_APPS = [
     "debug_toolbar",
     "rest_framework_simplejwt",
     "django_q",
+    "stripe",
     "book",
     "user",
     "borrowing",
+    "payment",
 ]
 
 
@@ -164,3 +166,9 @@ Q_CLUSTER = {
         'port': 6379,
         'db': 0, }
 }
+
+STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+
+PAYMENT_SUCCESS_URL = "http://127.0.0.1:8000"
+PAYMENT_FAILED_URL = "http://127.0.0.1:8000"
