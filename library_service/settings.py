@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "debug_toolbar",
     "rest_framework_simplejwt",
     "django_celery_beat",
+    "drf_spectacular",
     "stripe",
     "book",
     "user",
@@ -171,5 +172,18 @@ CELERY_BEAT_SCHEDULE = {
     "task-name": {
         "task": "borrowing.tasks.check_borrowing_overdue",
         "schedule": crontab(minute=0, hour=10),
+    },
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Library Service",
+    "DESCRIPTION": "Borrowing and payment library system",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "defaultModelRendering": "model",
+        "defaultModelsExpandDepth": 2,
+        "defaultModelExpandDepth": 2,
     },
 }
