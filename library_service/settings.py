@@ -91,8 +91,11 @@ WSGI_APPLICATION = "library_service.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "HOST": os.getenv("POSTGRES_HOST"),
+        "NAME": os.getenv("POSTGRES_DB"),
+        "USER": os.getenv("POSTGRES_USER"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
     }
 }
 
@@ -150,24 +153,6 @@ SIMPLE_JWT = {
     "AUTH_HEADER_NAME": "HTTP_AUTH",
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=5),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=10),
-}
-
-
-Q_CLUSTER = {
-    "name": "library-service",
-    "workers": 8,
-    "recycle": 500,
-    "timeout": 60,
-    "compress": True,
-    "save_limit": 250,
-    "queue_limit": 500,
-    "cpu_affinity": 1,
-    "label": "Django Q",
-    "redis": {
-        "host": "127.0.0.1",
-        "port": 6379,
-        "db": 0,
-    },
 }
 
 STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")

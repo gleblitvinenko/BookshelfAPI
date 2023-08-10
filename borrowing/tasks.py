@@ -1,9 +1,9 @@
 from django.db.models import Q
 from django.utils import timezone
 
+from borrowing.bot import send_notifications_in_group
 from borrowing.models import Borrowing
 from celery import shared_task
-from bot import send_notifications_in_group
 
 
 @shared_task
