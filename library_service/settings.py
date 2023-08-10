@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import os
 from datetime import timedelta
 from pathlib import Path
+
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -43,7 +45,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "debug_toolbar",
     "rest_framework_simplejwt",
-    "django_q",
+    "django_celery_beat",
     "stripe",
     "book",
     "user",
@@ -173,3 +175,16 @@ STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 
 PAYMENT_SUCCESS_URL = os.getenv("PAYMENT_SUCCESS_URL")
 PAYMENT_FAILED_URL = os.getenv("PAYMENT_FAILED_URL")
+
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
+CELERY_TIMEZONE = "Europe/Kiev"
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+
+CELERY_BEAT_SCHEDULE = {
+    "task-name": {
+        "task": "borrowing.tasks.check_borrowing_overdue",
+        "schedule": crontab(minute=0, hour=10),
+    },
+}
