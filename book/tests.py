@@ -18,7 +18,7 @@ def sample_book(**params):
         "author": "TestAuthor",
         "cover": "HARD",
         "inventory": 4,
-        "daily_fee": 0.16
+        "daily_fee": 0.16,
     }
     defaults.update(params)
 
@@ -52,7 +52,7 @@ class NotStaffUsersApiTests(TestCase):
             "author": "TestAuthor",
             "cover": "HARD",
             "inventory": 4,
-            "daily_fee": 0.16
+            "daily_fee": 0.16,
         }
         res = self.client.post(data=data, path=BOOKS_URL)
 
@@ -60,9 +60,7 @@ class NotStaffUsersApiTests(TestCase):
 
     def test_forbidden_update_book(self):
         book = sample_book()
-        data = {
-            "title": "AnotherTitle"
-        }
+        data = {"title": "AnotherTitle"}
         res = self.client.patch(path=BOOKS_URL + f"{book.id}/", data=data)
 
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
@@ -102,7 +100,7 @@ class StaffUsersApiTests(TestCase):
             "author": "TestAuthor",
             "cover": "Hard",
             "inventory": 4,
-            "daily_fee": 0.16
+            "daily_fee": 0.16,
         }
         res = self.client.post(data=data, path=BOOKS_URL)
 
@@ -110,9 +108,7 @@ class StaffUsersApiTests(TestCase):
 
     def test_allowed_update_book(self):
         book = sample_book()
-        data = {
-            "title": "AnotherTitle"
-        }
+        data = {"title": "AnotherTitle"}
         res = self.client.patch(path=BOOKS_URL + f"{book.id}/", data=data)
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)

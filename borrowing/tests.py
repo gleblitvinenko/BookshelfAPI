@@ -19,11 +19,7 @@ BORROWINGS_URL = reverse("borrowing:borrowing-list")
 
 def sample_borrowing(**params):
     book = Book.objects.create(
-        title="BookTest",
-        author="TestAuthor",
-        cover="HARD",
-        inventory=4,
-        daily_fee=0.17
+        title="BookTest", author="TestAuthor", cover="HARD", inventory=4, daily_fee=0.17
     )
 
     defaults = {
@@ -86,8 +82,7 @@ class AuthenticatedBorrowingsApiTests(TestCase):
         )
 
         borrowing1 = sample_borrowing(
-            borrower=self.user,
-            actual_return_date=date.today() + timedelta(days=5)
+            borrower=self.user, actual_return_date=date.today() + timedelta(days=5)
         )
         borrowing2 = sample_borrowing(borrower=self.user, book=book)
         res = self.client.get(BORROWINGS_URL, {"is_active": "true"})
@@ -199,10 +194,7 @@ class AdminBorrowingApiTests(TestCase):
             inventory=4,
             daily_fee=0.17,
         )
-        user = get_user_model().objects.create_user(
-            "test123@gmail.com",
-            "password1"
-        )
+        user = get_user_model().objects.create_user("test123@gmail.com", "password1")
         borrowing2 = sample_borrowing(borrower=user, book=book1)
         serializer2 = BorrowingSerializer(borrowing2)
 
