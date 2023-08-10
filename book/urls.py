@@ -8,4 +8,4 @@ router.register("", viewset=BookViewSet)
 
 urlpatterns = [path("", include(router.urls))]
 
-appname = "book"
+app_name = "book"
