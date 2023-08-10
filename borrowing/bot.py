@@ -4,6 +4,7 @@ from datetime import timedelta
 from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher
 from aiogram.utils import executor
+from django.conf import settings
 from django.utils import timezone
 from dotenv import load_dotenv
 
@@ -11,8 +12,8 @@ from borrowing.models import Borrowing
 
 load_dotenv()
 
-API_TOKEN = os.getenv("API_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
+API_TOKEN = settings.API_TOKEN
+CHAT_ID = settings.CHAT_ID
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
